@@ -1,0 +1,34 @@
+# Secrets: real values live only on the server / developer machine
+.env
+.env.*
+!.env.example
+
+# Java / Maven
+target/
+*.class
+hs_err_pid*.log
+
+# Node / frontend
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Python (generator)
+__pycache__/
+*.py[cod]
+.venv/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
