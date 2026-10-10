@@ -1,0 +1,9 @@
+# Keep the build context small: only pom.xml, mvnw, .mvn/ and src/ are needed
+target/
+HELP.md
+mvnw.cmd
+
+# IDE files
+.idea/
+*.iml
+.vscode/
