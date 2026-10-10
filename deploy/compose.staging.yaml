@@ -1,0 +1,12 @@
+services:
+  backend:
+    image: ghcr.io/vnskln/meteo-backend:${TAG:?TAG is not set}
+    networks:
+      default:
+      edge:
+        aliases:
+          - meteo-staging-backend
+
+networks:
+  edge:
+    external: true
