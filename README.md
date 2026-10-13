@@ -1,5 +1,7 @@
 # meteo
 
+[![Deploy Pipeline](https://github.com/vnskln/meteo/actions/workflows/pipeline.yaml/badge.svg?branch=main)](https://github.com/vnskln/meteo/actions/workflows/pipeline.yaml)
+
 Web application for measurement series, built as a project for the *Advanced Web Applications*
 course (Warsaw University of Technology). Sensors send air temperature readings for Warsaw, Kraków
 and Gdańsk to a REST API; readers browse them as a chart and a table, and the administrator manages
