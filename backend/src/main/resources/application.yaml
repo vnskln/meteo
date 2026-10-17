@@ -8,3 +8,5 @@ spring:
   web:
     error:
       include-stacktrace: never
+  autoconfigure:
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration

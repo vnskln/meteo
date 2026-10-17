@@ -40,12 +40,12 @@ public class AuthService {
             throw new UnauthorizedException("Invalid username or password");
         }
         else {
-            String token = newToken();
+            String token = Tokens.generate();
             Session session = new Session();
             session.setCreatedAt(Instant.now());
             session.setExpiresAt(session.getCreatedAt().plusSeconds(SESSION_SECONDS));
             session.setUserId(adminUser.get().getId());
-            session.setTokenHash(hash(token));
+            session.setTokenHash(Tokens.hash(token));
             sessionRepository.save(session);
             return token;
         }
@@ -61,22 +61,8 @@ public class AuthService {
         adminUserRepository.save(newAdminUser);
     }
 
-    private String newToken() {
-        byte[] bytes = new byte[32];
-        new SecureRandom().nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private byte[] hash(String token) {
-        try {
-            return MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
     public Optional<Session> findValidSession(String token) {
-        Optional<Session> session = sessionRepository.findByTokenHash(hash(token));
+        Optional<Session> session = sessionRepository.findByTokenHash(Tokens.hash(token));
         if (session.isPresent() && session.get().getExpiresAt().isAfter(Instant.now())) {
             return session;
         }
