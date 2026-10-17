@@ -11,6 +11,8 @@ import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import pl.zaimeteo.backend.error.ForbiddenException;
+import pl.zaimeteo.backend.error.NotFoundException;
 import pl.zaimeteo.backend.error.UnauthorizedException;
 
 @Service
@@ -83,4 +85,22 @@ public class AuthService {
         }
     }
 
+    public void logout(Session session) {
+        sessionRepository.delete(session);
+    }
+
+    public void changePassword(Session session, String currentPassword,
+            String newPassword) {
+        Optional<AdminUser> adminUser = adminUserRepository.findById(session.getUserId());
+        if (adminUser.isPresent()) {
+            if (passwordEncoder.matches(currentPassword, adminUser.get().getPasswordHash())) {
+                adminUser.get().setPasswordHash(passwordEncoder.encode(newPassword));
+                adminUserRepository.save(adminUser.get());
+            } else {
+                throw new ForbiddenException("Current password is incorrect");
+            }
+        } else {
+            throw new NotFoundException("User " + session.getUserId() + " not found");
+        }
+    }
 }
