@@ -8,6 +8,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
@@ -18,7 +19,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, AuthService authService)
+     throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -30,7 +32,7 @@ public class SecurityConfig {
                 response.setStatus(401);
                 response.setContentType("application/problem+json");
                 response.getWriter().write("{\"title\":\"Unauthorized\",\"status\":401}");
-            }));
+            })).addFilterBefore(new BearerTokenFilter(authService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }
