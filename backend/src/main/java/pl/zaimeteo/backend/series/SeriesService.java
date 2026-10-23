@@ -5,17 +5,21 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import pl.zaimeteo.backend.error.ConflictException;
 import pl.zaimeteo.backend.error.NotFoundException;
 import pl.zaimeteo.backend.error.UnprocessableException;
+import pl.zaimeteo.backend.measurement.MeasurementRepository;
 
 
 @Service
 public class SeriesService {
 
     private final SeriesRepository repository;
+    private final MeasurementRepository measurementRepository;
 
-    public SeriesService(SeriesRepository repository) {
+    public SeriesService(SeriesRepository repository, MeasurementRepository measurementRepository) {
         this.repository = repository;
+        this.measurementRepository = measurementRepository;
     }
 
     public List<Series> findAll() {
@@ -40,6 +44,10 @@ public class SeriesService {
     public Series update(Long id, SeriesInput input) {
         checkMinMaxValues(input);
         Series series = findById(id);
+        if (measurementRepository.existsBySeriesIdAndValueLessThan(id, input.minValue())
+                || measurementRepository.existsBySeriesIdAndValueGreaterThan(id, input.maxValue())) {
+            throw new ConflictException("New range excludes existing measurements of series " + id);
+        }
         fill(series, input);
         return repository.save(series);
     }

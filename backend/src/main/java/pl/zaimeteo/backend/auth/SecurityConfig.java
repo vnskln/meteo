@@ -25,7 +25,9 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.GET, "/api/health", "/api/series", "/api/series/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/health", "/api/series", "/api/series/*",
+                    "/api/measurements", "/api/measurements/*").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/measurements").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .anyRequest().authenticated())
             .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, e) -> {

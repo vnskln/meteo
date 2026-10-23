@@ -8,3 +8,4 @@ Tool: Claude (Anthropic), in Claude Code.
 | 2026-10-10 | Docker build context ignore file (`backend/.dockerignore`) | Reviewed and approved by me |
 | 2026-10-10 | Github CI pipelines walkthrough | Teach and verify pipelines |
 | 2026-10-19 | Architecture review and contract verification | Looking for mistakes and weakspots of appliaction |
+| 2026-10-23 | API quick test script | Bash script for quick qpi verification |
