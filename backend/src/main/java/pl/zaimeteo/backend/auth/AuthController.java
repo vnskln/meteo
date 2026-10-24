@@ -10,8 +10,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -21,16 +19,6 @@ public class AuthController {
 
     public AuthController (AuthService authService) {
         this.authService = authService;
-    }
-
-    record LoginRequest(@NotBlank String username, @NotBlank String password) {
-    }
-
-    record LoginResponse(String accessToken, String tokenType, int expiresIn) {
-    }
-
-    record PasswordChangeRequest(@NotBlank String currentPassword, 
-            @NotBlank @Size(min = 8) String newPassword) {
     }
 
     @PostMapping("/login")
