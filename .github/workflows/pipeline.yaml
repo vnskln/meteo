@@ -26,6 +26,31 @@ jobs:
       - name: Build and verify
         run: ./mvnw verify
 
+  e2e:
+    needs: backend
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: deploy
+    env:
+      POSTGRES_DB: meteo
+      POSTGRES_USER: meteo
+      POSTGRES_PASSWORD: mock-password
+      ADMIN_USERNAME: mock-user
+      ADMIN_PASSWORD: mock-password
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Start stack
+        run: docker compose -f compose.yaml -f compose.local.yaml up -d --build
+      - name: Wait for backend
+        run: curl --fail --silent --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/api/health
+      - name: Run zai-tests
+        run: |
+          node ../assignment/zai-tests.mjs --app http://localhost:8080 --user mock-user --pass mock-password --stage E2 | tee report.txt
+          # Show the report on the run summary page too
+          { echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
   image:
     needs: backend
     runs-on: ubuntu-24.04
@@ -52,7 +77,6 @@ jobs:
     needs: image
     runs-on: ubuntu-24.04
     environment: staging
-    # One deployment at a time; a newer push waits instead of cancelling a running one
     concurrency:
       group: deploy-staging
       cancel-in-progress: false
