@@ -80,6 +80,16 @@ class MeasurementControllerTest extends ApiTestSupport {
     }
 
     @Test
+    void valuesOnRangeBoundariesAreAccepted() throws Exception  {
+        Long seriesId = createSeries(-5, 5);
+        String apiKey = createSensorKey(seriesId);
+        sendMeasurement(apiKey, -5, "2026-01-10T10:00:00Z");
+        sendMeasurement(apiKey, 5, "2026-01-10T11:00:00Z");
+        assertThat(mvc.get().uri("/api/measurements?series=" + seriesId)).hasStatusOk()
+                .bodyJson().extractingPath("$[*].value").asArray().containsExactly(-5.0, 5.0); 
+    }
+
+    @Test
     void measurementCannotBeChanged() throws Exception {
         MvcTestResult created = sendMeasurement(createSensorKey(createSeries(0, 10)), 5, "2026-01-10T10:00:00Z");
         String location = created.getResponse().getHeader("Location");
@@ -94,4 +104,19 @@ class MeasurementControllerTest extends ApiTestSupport {
                 .hasStatusOk()
                 .bodyJson().extractingPath("$.value").isEqualTo(5.0);
     }
+
+    @Test
+    void fromAndToAreInclusive() throws Exception {
+        Long seriesId = createSeries(0, 10);
+        String apiKey = createSensorKey(seriesId);
+        sendMeasurement(apiKey, 1, "2026-01-10T10:00:00Z");
+        sendMeasurement(apiKey, 2, "2026-01-10T11:00:00Z");
+        sendMeasurement(apiKey, 3, "2026-01-10T12:00:00Z");
+        sendMeasurement(apiKey, 4, "2026-01-10T13:00:00Z");
+        assertThat(mvc.get().uri("/api/measurements?series=" + seriesId 
+        + "&from=2026-01-10T11:00:00Z&to=2026-01-10T12:00:00Z"))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$[*].value").asArray().containsExactly(2.0, 3.0); 
+    }
+
 }

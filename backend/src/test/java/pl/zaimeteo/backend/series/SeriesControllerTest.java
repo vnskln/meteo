@@ -50,4 +50,18 @@ class SeriesControllerTest extends ApiTestSupport {
         assertThat(mvc.get().uri("/api/series/" + seriesId)).hasStatus(HttpStatus.NOT_FOUND);
         assertThat(mvc.get().uri(measurementLocation)).hasStatus(HttpStatus.NOT_FOUND);
     }
+
+    @Test
+    void updateExcludingExistingMeasurementsReturns409() throws Exception {
+        Long seriesId = createSeries(0, 100);
+        sendMeasurement(createSensorKey(seriesId), 21.5, "2026-01-10T10:00:00Z");
+        assertThat(mvc.put().uri("/api/series/" + seriesId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + adminToken())
+                .content(seriesJson(50, 60)))
+                .hasStatus(HttpStatus.CONFLICT);
+        assertThat(mvc.get().uri("/api/series/" + seriesId))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.minValue").isEqualTo(0.0);
+    }
 }

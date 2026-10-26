@@ -2,6 +2,7 @@ package pl.zaimeteo.backend.sensor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.hibernate.dialect.SybaseASEDialect;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
@@ -36,5 +37,22 @@ class SensorControllerTest extends ApiTestSupport {
     @Test
     void listWithoutTokenReturns401() {
         assertThat(mvc.get().uri("/api/sensors")).hasStatus(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test 
+    void revokedSensorKeyReturns401AndMeasurementsStay() throws Exception {
+        MvcTestResult created = createSensor(createSeries(0, 10));
+        assertThat(created).hasStatus(HttpStatus.CREATED);
+        Long id = id(created);
+        String apiKey = JsonPath.read(body(created), "$.apiKey");
+        String adminToken = adminToken();
+        String location = sendMeasurement(apiKey, 1, "2026-01-10T10:00:00Z")
+            .getResponse().getHeader("Location");
+        assertThat(mvc.delete().uri("/api/sensors/" + id)
+            .header("Authorization", "Bearer " + adminToken)).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(sendMeasurement(apiKey, 1, "2026-01-10T10:00:00Z"))
+            .hasStatus(HttpStatus.UNAUTHORIZED);
+        assertThat(mvc.get().uri(location))
+            .hasStatusOk().bodyJson().extractingPath("$.value").isEqualTo(1.0);
     }
 }
