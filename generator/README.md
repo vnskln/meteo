@@ -48,7 +48,9 @@ A rejected value is printed and the generator goes on. A rejected key stops it. 
 
 ## Running on the server
 
-`deploy/generator/compose.yaml` runs three live generators, one per city, with the current Open-Meteo temperature every 15 minutes. They send to the public address over HTTPS, like any outside sensor. On the server, put `compose.yaml`, `generator.py` and a `.env` based on `.env.example` in one directory and run `docker compose up -d`.
+`deploy/generator/compose.yaml` runs three live generators, one per city, with the current Open-Meteo temperature every 15 minutes. They send to the public address over HTTPS, like any outside sensor.
+
+The deploy job copies `compose.yaml` and `generator.py` to `/opt/zai/generator-staging` and recreates the containers after every deploy. The `.env` with the sensor keys (see `.env.example`) is created there by hand once, after registering the sensors, and the pipeline never touches it.
 
 ## Data source
 

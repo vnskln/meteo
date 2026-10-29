@@ -1,0 +1,30 @@
+services:
+  warsaw:
+    image: python:3.14.10-slim
+    restart: unless-stopped
+    volumes:
+      - ./generator.py:/app/generator.py:ro
+    mem_limit: 64m
+    environment:
+      ZAI_API_KEY: ${WARSAW_API_KEY:?WARSAW_API_KEY is not set}
+    command: python -u /app/generator.py --api-url ${API_URL:?API_URL is not set} --source open-meteo --latitude 52.23 --longitude 21.01 --interval 900
+
+  krakow:
+    image: python:3.14.10-slim
+    restart: unless-stopped
+    volumes:
+      - ./generator.py:/app/generator.py:ro
+    mem_limit: 64m
+    environment:
+      ZAI_API_KEY: ${KRAKOW_API_KEY:?KRAKOW_API_KEY is not set}
+    command: python -u /app/generator.py --api-url ${API_URL:?API_URL is not set} --source open-meteo --latitude 50.06 --longitude 19.94 --interval 900
+
+  gdansk:
+    image: python:3.14.10-slim
+    restart: unless-stopped
+    volumes:
+      - ./generator.py:/app/generator.py:ro
+    mem_limit: 64m
+    environment:
+      ZAI_API_KEY: ${GDANSK_API_KEY:?GDANSK_API_KEY is not set}
+    command: python -u /app/generator.py --api-url ${API_URL:?API_URL is not set} --source open-meteo --latitude 54.35 --longitude 18.65 --interval 900
