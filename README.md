@@ -16,7 +16,7 @@ Stack: Java 25 and Spring Boot 4 (API), PostgreSQL with TimescaleDB, React (fron
 | --- | --- |
 | `backend/` | REST API |
 | `frontend/` | single-page application (planned) |
-| `generator/` | sensor emulator (planned) |
+| `generator/` | sensor emulator |
 | `deploy/` | Docker Compose files and environment template |
 | `docs/` | documentation |
 | `assignment/` | API contract and tests provided with the assignment |

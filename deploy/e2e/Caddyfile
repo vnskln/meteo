@@ -1,0 +1,16 @@
+# Caddy for the e2e job in CI: same headers as on the server, certificate from Caddy's local CA
+{
+	local_certs
+}
+
+localhost {
+	import /etc/caddy/headers.caddy
+
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+
+	handle {
+		respond "Meteo e2e" 200
+	}
+}

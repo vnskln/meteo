@@ -1,4 +1,19 @@
+zai-meteo.pl {
+	import /etc/caddy/headers.caddy
+
+	handle /api/* {
+		reverse_proxy meteo-prod-backend:8080
+	}
+
+	# Placeholder until the SPA is served from here
+	handle {
+		respond "Meteo" 200
+	}
+}
+
 staging.zai-meteo.pl {
+	import /etc/caddy/headers.caddy
+
 	handle /api/* {
 		reverse_proxy meteo-staging-backend:8080
 	}

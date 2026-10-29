@@ -38,16 +38,33 @@ jobs:
       POSTGRES_PASSWORD: mock-password
       ADMIN_USERNAME: mock-user
       ADMIN_PASSWORD: mock-password
+      COMPOSE_FILE: compose.yaml:compose.local.yaml:compose.e2e.yaml
     steps:
       - name: Checkout repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Start stack
-        run: docker compose -f compose.yaml -f compose.local.yaml up -d --build
+        run: docker compose up -d --build
       - name: Wait for backend
-        run: curl --fail --silent --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/api/health
-      - name: Run zai-tests
+        run: curl --fail --silent --insecure --retry 30 --retry-delay 2 --retry-all-errors https://localhost/api/health
+      - name: Trust Caddy local CA
+        run: docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/caddy-root.crt"
+      - name: Sample data from the generator
         run: |
-          node ../assignment/zai-tests.mjs --app http://localhost:8080 --user mock-user --pass mock-password --stage E2 | tee report.txt
+          token=$(curl --fail --silent -X POST http://localhost:8080/api/auth/login -H 'Content-Type: application/json' \
+            -d '{"username":"mock-user","password":"mock-password"}' | jq -r .accessToken)
+          for city in Warsaw Krakow Gdansk; do
+            series=$(curl --fail --silent -X POST http://localhost:8080/api/series -H "Authorization: Bearer $token" \
+              -H 'Content-Type: application/json' -d "{\"name\":\"$city\",\"minValue\":-40,\"maxValue\":50,\"color\":\"#1f77b4\"}" | jq .id)
+            key=$(curl --fail --silent -X POST http://localhost:8080/api/sensors -H "Authorization: Bearer $token" \
+              -H 'Content-Type: application/json' -d "{\"name\":\"$city sensor\",\"seriesId\":$series}" | jq -r .apiKey)
+            python3 ../generator/generator.py --api-url http://localhost:8080 --api-key "$key" \
+              --mode backfill --source sine --min -5 --max 15 --count 20 --interval 900
+          done
+      - name: Run zai-tests
+        env:
+          NODE_EXTRA_CA_CERTS: ${{ runner.temp }}/caddy-root.crt
+        run: |
+          node ../assignment/zai-tests.mjs --app https://localhost --user mock-user --pass mock-password --stage E2 | tee report.txt
           # Show the report on the run summary page too
           { echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
