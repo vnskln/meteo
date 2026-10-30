@@ -199,3 +199,76 @@ jobs:
         run: |
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors https://staging.zai-meteo.pl/api/health
           curl --silent --dump-header - --output /dev/null https://staging.zai-meteo.pl/ | grep -i '^content-security-policy:'
+
+  deploy-prod:
+    needs: deploy-staging
+    runs-on: ubuntu-24.04
+    environment: production
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: true
+    env:
+      TARGET: ${{ vars.DEPLOY_USER }}@${{ vars.PROD_HOST }}
+      APP_URL: ${{ vars.PROD_URL }}
+      ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Configure ssh
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Copy compose
+        run: scp deploy/compose.yaml deploy/compose.prod.yaml "$TARGET:/opt/zai/prod/"
+      - name: Deploy
+        run: |
+          ssh "$TARGET" "TAG=${{ github.sha }} sh -s" <<'EOF'
+            set -e
+            cd /opt/zai/prod
+            sed -i "s/^TAG=.*/TAG=$TAG/" .env
+            docker compose -f compose.yaml -f compose.prod.yaml pull
+            docker compose -f compose.yaml -f compose.prod.yaml up -d
+            docker image prune -af
+          EOF
+      - name: Smoke test
+        run: |
+          body=$(curl --fail --silent --show-error --retry 10 --retry-delay 5 "$APP_URL/api/health")
+          echo "$body"
+          echo "$body" | grep -qF '"status":"ok"'
+      - name: Copy generator
+        run: |
+          ssh "$TARGET" mkdir -p /opt/zai/generator-prod
+          scp deploy/generator/compose.yaml generator/generator.py "$TARGET:/opt/zai/generator-prod/"
+      - name: Deploy generator
+        run: |
+          ssh "$TARGET" sh -s <<'EOF'
+            set -e
+            cd /opt/zai/generator-prod
+            docker compose up -d --force-recreate
+          EOF
+      - name: Run zai-tests
+        run: |
+          node assignment/zai-tests.mjs --app "$APP_URL" --user "$ADMIN_USERNAME" --pass "$ADMIN_PASSWORD" --stage E2 | tee report.txt
+          { echo "### zai-tests on $APP_URL"; echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove leftover test series
+        if: always()
+        run: |
+          set -o pipefail
+          token=$(jq -n --arg u "$ADMIN_USERNAME" --arg p "$ADMIN_PASSWORD" '{username: $u, password: $p}' \
+            | curl --fail --silent --show-error -X POST "$APP_URL/api/auth/login" -H 'Content-Type: application/json' --data @- \
+            | jq -r .accessToken)
+          echo "::add-mask::$token"
+          for id in $(curl --fail --silent "$APP_URL/api/series" | jq -r '.[] | select(.name | startswith("ZAI-TEST-")) | .id'); do
+            echo "Deleting leftover test series $id"
+            curl --fail --silent --show-error -X DELETE -H "Authorization: Bearer $token" "$APP_URL/api/series/$id"
+          done
+          curl --fail --silent -X POST -H "Authorization: Bearer $token" "$APP_URL/api/auth/logout"
+          left=$(curl --fail --silent "$APP_URL/api/series" | jq '[.[] | select(.name | startswith("ZAI-TEST-"))] | length')
+          echo "Test series left: $left"
+          test "$left" -eq 0

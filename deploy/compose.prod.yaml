@@ -1,0 +1,16 @@
+services:
+  db:
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  backend:
+    image: ghcr.io/vnskln/meteo-backend:${TAG:?TAG is not set}
+    networks:
+      default:
+      edge:
+        aliases:
+          - meteo-prod-backend
+
+networks:
+  edge:
+    external: true

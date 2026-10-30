@@ -1,6 +1,7 @@
 # Shared part for every environment. Start commands:
 #   local:   docker compose -f compose.yaml -f compose.local.yaml up --build
 #   staging: docker compose -f compose.yaml -f compose.staging.yaml up -d
+#   prod:    docker compose -f compose.yaml -f compose.prod.yaml up -d
 
 services:
   db:
