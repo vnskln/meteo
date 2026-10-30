@@ -102,6 +102,9 @@ jobs:
       contents: read
     env:
       TARGET: ${{ vars.DEPLOY_USER }}@${{ vars.STAGING_HOST }}
+      APP_URL: ${{ vars.STAGING_URL }}
+      ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -144,6 +147,26 @@ jobs:
             cd /opt/zai/generator-staging
             docker compose up -d --force-recreate
           EOF
+      - name: Run zai-tests
+        run: |
+          node assignment/zai-tests.mjs --app "$APP_URL" --user "$ADMIN_USERNAME" --pass "$ADMIN_PASSWORD" --stage E2 | tee report.txt
+          { echo "### zai-tests on $APP_URL"; echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove leftover test series
+        if: always()
+        run: |
+          set -o pipefail
+          token=$(jq -n --arg u "$ADMIN_USERNAME" --arg p "$ADMIN_PASSWORD" '{username: $u, password: $p}' \
+            | curl --fail --silent --show-error -X POST "$APP_URL/api/auth/login" -H 'Content-Type: application/json' --data @- \
+            | jq -r .accessToken)
+          echo "::add-mask::$token"
+          for id in $(curl --fail --silent "$APP_URL/api/series" | jq -r '.[] | select(.name | startswith("ZAI-TEST-")) | .id'); do
+            echo "Deleting leftover test series $id"
+            curl --fail --silent --show-error -X DELETE -H "Authorization: Bearer $token" "$APP_URL/api/series/$id"
+          done
+          curl --fail --silent -X POST -H "Authorization: Bearer $token" "$APP_URL/api/auth/logout"
+          left=$(curl --fail --silent "$APP_URL/api/series" | jq '[.[] | select(.name | startswith("ZAI-TEST-"))] | length')
+          echo "Test series left: $left"
+          test "$left" -eq 0
 
   deploy-edge:
     needs: deploy-staging
