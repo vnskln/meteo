@@ -143,3 +143,35 @@ jobs:
             cd /opt/zai/generator-staging
             docker compose up -d --force-recreate
           EOF
+
+  deploy-edge:
+    needs: deploy-staging
+    runs-on: ubuntu-24.04
+    environment: edge
+    concurrency:
+      group: deploy-edge
+      cancel-in-progress: true
+    env:
+      TARGET: ${{ vars.DEPLOY_USER }}@${{ vars.EDGE_HOST }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate Caddyfile
+        run: docker run --rm -v "$PWD/deploy/edge:/etc/caddy:ro" caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile
+      - name: Configure ssh
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Copy edge config
+        run: scp deploy/edge/Caddyfile deploy/edge/headers.caddy deploy/edge/compose.yaml "$TARGET:/opt/zai/edge/"
+      - name: Deploy edge
+        run: ssh "$TARGET" 'cd /opt/zai/edge && docker compose up -d --force-recreate'
+      - name: Smoke test
+        run: |
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors https://staging.zai-meteo.pl/api/health
+          curl --silent --dump-header - --output /dev/null https://staging.zai-meteo.pl/ | grep -i '^content-security-policy:'
