@@ -11,3 +11,4 @@ Tool: Claude (Anthropic), in Claude Code.
 | 2026-10-23 | API quick test script | Bash script for quick qpi verification |
 | 2026-10-29 | Generator README.md | Documentation based on code |
 | 2026-10-29 | Caddy configuration | Webserver config |
+| 2026-11-01 | Base version of README.md | Reviewed and rephrased by me |
