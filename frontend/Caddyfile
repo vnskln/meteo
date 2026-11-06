@@ -1,0 +1,6 @@
+# Serves the built SPA inside the frontend container. HTTPS and security headers are handled by the edge Caddy.
+:80 {
+	root * /srv
+	try_files {path} /index.html
+	file_server
+}

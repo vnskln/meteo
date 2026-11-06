@@ -26,8 +26,29 @@ jobs:
       - name: Build and verify
         run: ./mvnw verify
 
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type check and build
+        run: npm run build
+
   e2e:
-    needs: backend
+    needs: [backend, frontend]
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -70,7 +91,7 @@ jobs:
           { echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
   image:
-    needs: backend
+    needs: [backend, frontend]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -90,6 +111,12 @@ jobs:
           context: backend
           push: true
           tags: ghcr.io/vnskln/meteo-backend:${{ github.sha }}
+      - name: Build and push frontend image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: frontend
+          push: true
+          tags: ghcr.io/vnskln/meteo-frontend:${{ github.sha }}
 
   deploy-staging:
     needs: image
@@ -149,7 +176,7 @@ jobs:
           EOF
       - name: Run zai-tests
         run: |
-          node assignment/zai-tests.mjs --app "$APP_URL" --user "$ADMIN_USERNAME" --pass "$ADMIN_PASSWORD" --stage E2 | tee report.txt
+          node assignment/zai-tests.mjs --app "$APP_URL" --user "$ADMIN_USERNAME" --pass "$ADMIN_PASSWORD" --stage E2 --lighthouse | tee report.txt
           { echo "### zai-tests on $APP_URL"; echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Remove leftover test series
         if: always()

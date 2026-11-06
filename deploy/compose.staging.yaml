@@ -11,6 +11,15 @@ services:
         aliases:
           - meteo-staging-backend
 
+  frontend:
+    image: ghcr.io/vnskln/meteo-frontend:${TAG:?TAG is not set}
+    restart: unless-stopped
+    mem_limit: 64m
+    networks:
+      edge:
+        aliases:
+          - meteo-staging-frontend
+
 networks:
   edge:
     external: true

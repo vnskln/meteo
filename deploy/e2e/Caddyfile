@@ -11,6 +11,6 @@ localhost {
 	}
 
 	handle {
-		respond "Meteo e2e" 200
+		reverse_proxy frontend:80
 	}
 }

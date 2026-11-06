@@ -1,8 +1,13 @@
 services:
+  frontend:
+    build: ../frontend
+    image: meteo-frontend:dev
+
   caddy:
     image: caddy:2.11.7-alpine
     depends_on:
       - backend
+      - frontend
     ports:
       - "127.0.0.1:80:80"
       - "127.0.0.1:443:443"
