@@ -11,8 +11,8 @@ The sensors are emulated by a small Python script that reads the real temperatur
 [Open-Meteo](https://open-meteo.com/) and sends it to the API every 15 minutes, the same way a
 physical device would.
 
-Stack: Java 25 and Spring Boot 4.1 (API), PostgreSQL 17 with TimescaleDB, React (frontend, in
-progress), Python (sensor emulator), Docker Compose and Caddy, GitHub Actions.
+Stack: Java 25 and Spring Boot 4.1 (API), PostgreSQL 17 with TimescaleDB, React with TypeScript and
+Vite (frontend, in progress), Python (sensor emulator), Docker Compose and Caddy, GitHub Actions.
 
 ## Where it runs
 
@@ -22,8 +22,8 @@ progress), Python (sensor emulator), Docker Compose and Caddy, GitHub Actions.
 | staging | https://staging.zai-meteo.pl | automatically after every push to `main` |
 
 The API is under `/api`, for example https://zai-meteo.pl/api/series or
-https://zai-meteo.pl/api/health. The root page is still a placeholder, the frontend comes in the
-second stage.
+https://zai-meteo.pl/api/health. The frontend is on staging for now and still in progress. On
+production the root page stays a placeholder until the second stage.
 
 ## Status
 
@@ -48,6 +48,8 @@ Stage E1, deployed API:
 
 Stage E2, full application:
 
+- [x] frontend skeleton on staging: routing, page layout, the list of series and a plain table of
+  the last 24 hours from the API; the login and admin pages are empty so far
 - [ ] React single-page app: chart and table, time range and series filters, clicking a table
   row highlights the point on the chart
 - [ ] admin panel for series and sensors
@@ -69,8 +71,8 @@ Bonus parts:
 | --- | --- |
 | `backend/` | Spring Boot API: one package per resource (`series`, `sensor`, `measurement`, `auth`), error handling in `error`, migrations in `src/main/resources/db/migration`, integration tests in `src/test` (they start PostgreSQL with Testcontainers) |
 | `generator/` | sensor emulator, see [`generator/README.md`](generator/README.md) |
-| `frontend/` | single-page application (not there yet) |
-| `deploy/` | Docker Compose files: `compose.yaml` is shared, `compose.local.yaml`, `compose.staging.yaml` and `compose.prod.yaml` add what differs per environment, `compose.e2e.yaml` is used in CI; `.env.example` lists the variables |
+| `frontend/` | single-page application in React, see [`frontend/README.md`](frontend/README.md) |
+| `deploy/` | Docker Compose files: `compose.yaml` is shared (database and backend), `compose.local.yaml`, `compose.staging.yaml` and `compose.prod.yaml` add what differs per environment, `compose.e2e.yaml` is used in CI; `.env.example` lists the variables |
 | `deploy/edge/` | Caddy, the only entry point on the server: HTTPS certificates, security headers, proxy to staging and production |
 | `deploy/generator/` | three live generators (one per city) run next to each environment |
 | `.github/workflows/pipeline.yaml` | the whole CI/CD pipeline |
@@ -81,24 +83,28 @@ Bonus parts:
 ## How it's deployed
 
 Everything runs on one small VPS. Caddy listens on ports 80 and 443 and forwards `/api` to the
-staging or production backend. Each environment is a separate Compose project with its own
-database, and neither the database nor the backend is published to the internet directly.
+staging or production backend. On staging everything else goes to the frontend container, a second
+small Caddy that serves the built files, so Node.js only runs during the build. Each environment is
+a separate Compose project with its own database, and neither the database nor the backend is
+published to the internet directly.
 
 The pipeline runs on every push to `main`:
 
-1. `backend` builds the API and runs the JUnit tests,
+1. `backend` builds the API and runs the JUnit tests, `frontend` runs the linter (with accessibility
+   rules), the type check and the build,
 2. `e2e` starts the whole stack with Caddy, fills it with generator data and runs the
-   instructor's tests over HTTPS; `image` builds the Docker image and pushes it to GHCR, tagged with
-   the commit SHA,
-3. `deploy-staging` deploys that image, restarts the generators, runs the instructor's tests against
-   staging and deletes the test series they leave behind,
+   instructor's tests over HTTPS; `image` builds the backend and frontend Docker images and pushes
+   them to GHCR, tagged with the commit SHA,
+3. `deploy-staging` deploys those images, restarts the generators, runs the instructor's tests with
+   the Lighthouse accessibility audit against staging and deletes the test series they leave behind,
 4. `deploy-edge` (Caddy config) and `deploy-prod` wait for my approval; production gets exactly the
-   image that was tested on staging.
+   images that were tested on staging.
 
 ## Running locally
 
 Needs Docker with Compose v2. JDK 25 is only needed to run the backend outside Docker (the Maven
-Wrapper is in the repo), Python 3 for the generator and Node.js 20+ for the instructor's tests.
+Wrapper is in the repo), Python 3 for the generator and Node.js 22.12+ for the frontend and the
+instructor's tests.
 
 ```bash
 cd deploy
@@ -126,6 +132,17 @@ curl -s -X POST http://localhost:8080/api/sensors -H "Authorization: Bearer $TOK
 python generator/generator.py --api-url http://localhost:8080 --api-key <apiKey> \
   --mode backfill --source open-meteo --latitude 52.23 --longitude 21.01
 ```
+
+The local Compose setup doesn't start the frontend, it runs on the Vite dev server:
+
+```bash
+cd frontend
+npm install
+npm run dev    # http://localhost:5173
+```
+
+Vite forwards `/api` to staging, so the page shows real data without a local backend. To use the
+local one, change `target` in `frontend/vite.config.ts` to `http://127.0.0.1:8080`.
 
 Tests:
 
