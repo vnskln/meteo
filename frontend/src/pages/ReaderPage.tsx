@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getMeasurements, getSeries } from '../api.ts'
 import MeasurementsChart from '../components/MeasurementsChart.tsx'
-import { lastHours, timeFormat } from '../format.ts'
+import MeasurementsTable from '../components/MeasurementsTable.tsx'
+import { lastHours } from '../format.ts'
+import { toRows } from '../rows.ts'
 
 export default function ReaderPage() {
   const [range] = useState(() => lastHours(24))
@@ -21,8 +23,6 @@ export default function ReaderPage() {
   if (measurements.isError) {
     return <p role="alert">Could not load data: {measurements.error.message}</p>
   }
-
-  const names = new Map(series.data.map((s) => [s.id, s.name]))
 
   return (
     <>
@@ -44,24 +44,7 @@ export default function ReaderPage() {
         measurements={measurements.data}
       />
 
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Time</th>
-            <th scope="col">Series</th>
-            <th scope="col">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {measurements.data.map((m) => (
-            <tr key={m.id}>
-              <td>{timeFormat.format(new Date(m.timestamp))}</td>
-              <td>{names.get(m.seriesId)}</td>
-              <td>{m.value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <MeasurementsTable visible={series.data} rows={toRows(measurements.data)} />
     </>
   )
 }
