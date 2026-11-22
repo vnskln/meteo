@@ -1,19 +1,15 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getMeasurements, getSeries } from '../api.ts'
-
-const timeFormat = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'Europe/Warsaw',
-  dateStyle: 'short',
-  timeStyle: 'short',
-})
+import MeasurementsChart from '../components/MeasurementsChart.tsx'
+import { lastHours, timeFormat } from '../format.ts'
 
 export default function ReaderPage() {
-  const [from] = useState(() => new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+  const [range] = useState(() => lastHours(24))
   const series = useQuery({ queryKey: ['series'], queryFn: getSeries })
   const measurements = useQuery({
-    queryKey: ['measurements', from],
-    queryFn: () => getMeasurements(from),
+    queryKey: ['measurements', range],
+    queryFn: () => getMeasurements(range),
   })
 
   if (series.isPending || measurements.isPending) {
@@ -42,6 +38,12 @@ export default function ReaderPage() {
       </ul>
 
       <h2>Last 24 hours</h2>
+      <MeasurementsChart
+        series={series.data}
+        visible={series.data}
+        measurements={measurements.data}
+      />
+
       <table>
         <thead>
           <tr>

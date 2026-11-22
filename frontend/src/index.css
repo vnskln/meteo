@@ -20,6 +20,12 @@ a[aria-current='page'] {
   font-weight: bold;
 }
 
+.chart {
+  position: relative;
+  height: 22rem;
+  margin-bottom: 1rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
