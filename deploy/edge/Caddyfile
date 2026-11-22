@@ -5,9 +5,8 @@ zai-meteo.pl {
 		reverse_proxy meteo-prod-backend:8080
 	}
 
-	# Placeholder until the SPA is served from here
 	handle {
-		respond "Meteo" 200
+		reverse_proxy meteo-prod-frontend:80
 	}
 }
 

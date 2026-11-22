@@ -281,7 +281,7 @@ jobs:
           EOF
       - name: Run zai-tests
         run: |
-          node assignment/zai-tests.mjs --app "$APP_URL" --user "$ADMIN_USERNAME" --pass "$ADMIN_PASSWORD" --stage E2 | tee report.txt
+          node assignment/zai-tests.mjs --app "$APP_URL" --user "$ADMIN_USERNAME" --pass "$ADMIN_PASSWORD" --stage E2 --lighthouse | tee report.txt
           { echo "### zai-tests on $APP_URL"; echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Remove leftover test series
         if: always()
