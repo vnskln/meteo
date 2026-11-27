@@ -14,6 +14,7 @@ import 'chartjs-adapter-date-fns'
 import { Line } from 'react-chartjs-2'
 import type { Measurement, Series } from '../api.ts'
 import { tickFormat, timeFormat } from '../format.ts'
+import type { Row } from '../rows.ts'
 
 ChartJS.register(LineElement, PointElement, LinearScale, TimeScale, Tooltip, Legend)
 
@@ -45,30 +46,33 @@ type Props = {
   series: Series[]
   visible: Series[]
   measurements: Measurement[]
+  selected: Row | null
 }
 
-export default function MeasurementsChart({ series, visible, measurements }: Props) {
+export default function MeasurementsChart({ series, visible, measurements, selected }: Props) {
   const data = useMemo(() => {
-    const dense = measurements.length / visible.length > 300
+    const radius = measurements.length / visible.length > 300 ? 0.5 : 3
+    const selectedIds = selected ? Object.values(selected.values).map((m) => m.id) : []
     return {
       datasets: visible.map((s) => {
         const index = series.indexOf(s)
+        const points = measurements
+          .filter((m) => m.seriesId === s.id)
+          .map((m) => ({ x: new Date(m.timestamp).getTime(), y: m.value, id: m.id }))
+          .toReversed()
         return {
           label: s.unit ? `${s.name} (${s.unit})` : s.name,
           borderColor: s.color,
           backgroundColor: s.color,
           pointStyle: POINT_STYLES[index % POINT_STYLES.length],
           borderDash: LINE_DASHES[index % LINE_DASHES.length],
-          pointRadius: dense ? 0.5 : 3,
+          pointRadius: points.map((p) => (selectedIds.includes(p.id) ? 9 : radius)),
           pointHoverRadius: 9,
-          data: measurements
-            .filter((m) => m.seriesId === s.id)
-            .map((m) => ({ x: new Date(m.timestamp).getTime(), y: m.value }))
-            .toReversed(),
+          data: points,
         }
       }),
     }
-  }, [series, visible, measurements])
+  }, [series, visible, measurements, selected])
 
   return (
     <div className="chart">

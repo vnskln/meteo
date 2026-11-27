@@ -20,6 +20,26 @@ a[aria-current='page'] {
   font-weight: bold;
 }
 
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+fieldset p {
+  flex-basis: 100%;
+  margin: 0;
+  color: #b00020;
+}
+
 .chart {
   position: relative;
   height: 22rem;
@@ -48,6 +68,38 @@ td {
   padding: 0.25rem 0.5rem;
   border-bottom: 1px solid #ccc;
   text-align: left;
+}
+
+tbody tr {
+  position: relative;
+}
+
+tbody tr.selected {
+  background: #fff3c4;
+}
+
+.row-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.row-button::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  cursor: pointer;
+}
+
+.row-button:focus-visible {
+  outline: none;
+}
+
+.row-button:focus-visible::after {
+  outline: 2px solid #1a56db;
+  outline-offset: -2px;
 }
 
 footer {
